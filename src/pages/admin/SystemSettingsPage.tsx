@@ -15,6 +15,8 @@ export function SystemSettingsPage() {
   const { settings: currentSettings, refreshSettings } = useSettings();
   const [features, setFeatures] = useState<Record<string, boolean>>({});
   const [aiConfig, setAiConfig] = useState<any>({});
+  const [backendUrl, setBackendUrl] = useState('');
+  const [apiTimeout, setApiTimeout] = useState(30000);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{
     type: 'success' | 'error';
@@ -25,6 +27,8 @@ export function SystemSettingsPage() {
     if (currentSettings) {
       setFeatures(currentSettings.features || {});
       setAiConfig(currentSettings.ai_config || {});
+      setBackendUrl(currentSettings.backend_url || 'http://localhost:8000');
+      setApiTimeout(currentSettings.api_timeout || 30000);
     }
   }, [currentSettings]);
 
@@ -46,6 +50,20 @@ export function SystemSettingsPage() {
         .eq('key', 'ai_config');
 
       if (aiError) throw aiError;
+
+      const { error: backendError } = await supabase
+        .from('system_settings')
+        .update({ value: backendUrl, updated_at: new Date().toISOString() })
+        .eq('key', 'backend_url');
+
+      if (backendError) throw backendError;
+
+      const { error: timeoutError } = await supabase
+        .from('system_settings')
+        .update({ value: apiTimeout, updated_at: new Date().toISOString() })
+        .eq('key', 'api_timeout');
+
+      if (timeoutError) throw timeoutError;
 
       await refreshSettings();
 
@@ -71,6 +89,8 @@ export function SystemSettingsPage() {
     if (currentSettings) {
       setFeatures(currentSettings.features || {});
       setAiConfig(currentSettings.ai_config || {});
+      setBackendUrl(currentSettings.backend_url || 'http://localhost:8000');
+      setApiTimeout(currentSettings.api_timeout || 30000);
       setMessage({ type: 'success', text: 'Settings reset to current values' });
       setTimeout(() => setMessage(null), 2000);
     }
@@ -369,6 +389,76 @@ export function SystemSettingsPage() {
                       API keys are managed via environment variables (GROQ_API_KEY).
                       Configure them in your Supabase Edge Functions settings.
                     </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <h2 className="text-xl font-semibold text-slate-900 mb-4">
+                Backend Configuration
+              </h2>
+              <p className="text-slate-600 mb-6 text-sm">
+                Configure Python backend URL for video processing. This URL is used for YouTube imports, transcription, and clip generation.
+              </p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Backend URL
+                  </label>
+                  <input
+                    type="url"
+                    value={backendUrl}
+                    onChange={(e) => setBackendUrl(e.target.value)}
+                    placeholder="http://localhost:8000 or https://your-backend.com"
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    Development: http://localhost:8000 | Production: https://your-backend-url.com
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    API Timeout (ms)
+                  </label>
+                  <input
+                    type="number"
+                    min="5000"
+                    max="120000"
+                    step="1000"
+                    value={apiTimeout}
+                    onChange={(e) => setApiTimeout(parseInt(e.target.value))}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    Maximum time to wait for backend responses (5-120 seconds)
+                  </p>
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex gap-3">
+                  <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-amber-900">
+                    <p className="font-medium mb-1">
+                      Important: Protocol Match
+                    </p>
+                    <p className="text-amber-800">
+                      If your frontend uses HTTPS, the backend MUST also use HTTPS to avoid mixed content errors.
+                      Local development can use HTTP for both.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="text-sm text-green-900">
+                    <p className="font-medium mb-2">Backend Services:</p>
+                    <ul className="list-disc list-inside space-y-1 text-green-800">
+                      <li>YouTube video downloads (yt-dlp)</li>
+                      <li>Video processing (ffmpeg)</li>
+                      <li>Audio transcription (Whisper)</li>
+                      <li>Clip generation (AI analysis)</li>
+                    </ul>
                   </div>
                 </div>
               </div>

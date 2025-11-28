@@ -5,24 +5,60 @@
  * Uses yt-dlp and ffmpeg via FastAPI
  */
 
-function getBackendUrl(): string {
-  const configuredUrl = import.meta.env.VITE_BACKEND_URL;
+import { supabase } from '../lib/supabase';
 
-  if (configuredUrl) {
-    return configuredUrl;
+let cachedBackendUrl: string | null = null;
+let lastFetchTime = 0;
+const CACHE_DURATION = 5 * 60 * 1000;
+
+/**
+ * Get backend URL from database or environment
+ * Priority: Database > Environment > Default
+ */
+async function getBackendUrl(): Promise<string> {
+  if (cachedBackendUrl && Date.now() - lastFetchTime < CACHE_DURATION) {
+    return cachedBackendUrl;
   }
 
-  // Default to localhost for development
-  if (window.location.hostname === 'localhost' || window.location.hostname === 'http://34.132.252.196:8000') {
-    return 'http://34.132.252.196:8000';
+  try {
+    const { data, error } = await supabase
+      .from('system_settings')
+      .select('value')
+      .eq('key', 'backend_url')
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (!error && data?.value) {
+      cachedBackendUrl = data.value as string;
+      lastFetchTime = Date.now();
+      return cachedBackendUrl;
+    }
+  } catch (error) {
+    console.warn('Failed to fetch backend URL from database:', error);
   }
 
-  // For production, backend URL must be explicitly set
-  console.error('VITE_BACKEND_URL is not configured. Please set it in your .env file.');
+  const envUrl = import.meta.env.VITE_BACKEND_URL;
+  if (envUrl) {
+    cachedBackendUrl = envUrl;
+    lastFetchTime = Date.now();
+    return envUrl;
+  }
+
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://localhost:8000';
+  }
+
+  console.error('Backend URL not configured in database or .env file.');
   return '';
 }
 
-const BACKEND_URL = getBackendUrl();
+/**
+ * Clear backend URL cache
+ */
+export function clearBackendUrlCache(): void {
+  cachedBackendUrl = null;
+  lastFetchTime = 0;
+}
 
 export interface VideoInfo {
   title: string;
@@ -53,12 +89,14 @@ export interface BackendResponse {
 /**
  * Check if backend URL is configured
  */
-function ensureBackendConfigured(): void {
-  if (!BACKEND_URL) {
+async function ensureBackendConfigured(): Promise<string> {
+  const url = await getBackendUrl();
+  if (!url) {
     throw new Error(
-      'Backend URL is not configured. Please set VITE_BACKEND_URL in your .env file.'
+      'Backend URL is not configured. Please set it in System Settings or .env file.'
     );
   }
+  return url;
 }
 
 /**
@@ -88,10 +126,10 @@ export async function checkBackendHealth(): Promise<{
     whisper: boolean;
   };
 }> {
-  ensureBackendConfigured();
+  const backendUrl = await ensureBackendConfigured();
 
   try {
-    const response = await fetch(`${BACKEND_URL}/health`, {
+    const response = await fetch(`${backendUrl}/health`, {
       mode: 'cors',
       credentials: 'omit',
     });
@@ -111,10 +149,10 @@ export async function checkBackendHealth(): Promise<{
  * Get YouTube video information without downloading
  */
 export async function getYouTubeInfo(url: string): Promise<VideoInfo> {
-  ensureBackendConfigured();
+  const backendUrl = await ensureBackendConfigured();
 
   try {
-    const response = await fetch(`${BACKEND_URL}/api/youtube/info`, {
+    const response = await fetch(`${backendUrl}/api/youtube/info`, {
       method: 'POST',
       mode: 'cors',
       credentials: 'omit',
@@ -146,10 +184,10 @@ export async function importFromYouTube(
   url: string,
   userId: string
 ): Promise<BackendResponse> {
-  ensureBackendConfigured();
+  const backendUrl = await ensureBackendConfigured();
 
   try {
-    const response = await fetch(`${BACKEND_URL}/api/youtube/import`, {
+    const response = await fetch(`${backendUrl}/api/youtube/import`, {
       method: 'POST',
       mode: 'cors',
       credentials: 'omit',
@@ -220,10 +258,10 @@ export async function startTranscription(
   userId: string,
   language: string = 'en'
 ): Promise<BackendResponse> {
-  ensureBackendConfigured();
+  const backendUrl = await ensureBackendConfigured();
 
   try {
-    const response = await fetch(`${BACKEND_URL}/api/transcription/start`, {
+    const response = await fetch(`${backendUrl}/api/transcription/start`, {
       method: 'POST',
       mode: 'cors',
       credentials: 'omit',
@@ -258,10 +296,10 @@ export async function generateClips(
     maxDuration?: number;
   }
 ): Promise<BackendResponse> {
-  ensureBackendConfigured();
+  const backendUrl = await ensureBackendConfigured();
 
   try {
-    const response = await fetch(`${BACKEND_URL}/api/clips/generate`, {
+    const response = await fetch(`${backendUrl}/api/clips/generate`, {
       method: 'POST',
       mode: 'cors',
       credentials: 'omit',

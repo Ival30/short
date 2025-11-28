@@ -37,6 +37,8 @@ export interface SystemSettings {
     temperature: number;
     max_tokens: number;
   };
+  backend_url?: string;
+  api_timeout?: number;
 }
 
 export interface UserUsage {
