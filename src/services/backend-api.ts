@@ -13,7 +13,7 @@ function getBackendUrl(): string {
   }
 
   // Default to localhost for development
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+  if (window.location.hostname === 'localhost' || window.location.hostname === 'http://34.132.252.196:8000') {
     return 'http://34.132.252.196:8000';
   }
 
