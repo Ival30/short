@@ -67,12 +67,12 @@ export function useSettings() {
       const { data, error } = await supabase
         .from('system_settings')
         .select('*')
-        .eq('is_active', true);
+        .eq('is_active', true) as { data: Array<{ key: string; value: any }> | null; error: any };
 
       if (error) throw error;
 
       const settingsMap: any = {};
-      data?.forEach((setting) => {
+      data?.forEach((setting: any) => {
         settingsMap[setting.key] = setting.value;
       });
 
@@ -157,7 +157,6 @@ export function useSettings() {
   function hasReachedLimit(limitType: string): boolean {
     if (!usage || !profile || !settings) return false;
 
-    const tier = profile.subscription_tier || 'free';
     const limit = getUserLimit(limitType);
 
     if (limit === -1) return false;

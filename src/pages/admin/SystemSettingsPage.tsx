@@ -10,6 +10,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useSettings } from '../../hooks/useSettings';
+import { clearBackendUrlCache } from '../../services/backend-api';
 
 export function SystemSettingsPage() {
   const { settings: currentSettings, refreshSettings } = useSettings();
@@ -39,33 +40,36 @@ export function SystemSettingsPage() {
     try {
       const { error: featuresError } = await supabase
         .from('system_settings')
-        .update({ value: features, updated_at: new Date().toISOString() })
+        .update({ value: features as any, updated_at: new Date().toISOString() } as any)
         .eq('key', 'features');
 
       if (featuresError) throw featuresError;
 
       const { error: aiError } = await supabase
         .from('system_settings')
-        .update({ value: aiConfig, updated_at: new Date().toISOString() })
+        .update({ value: aiConfig, updated_at: new Date().toISOString() } as any)
         .eq('key', 'ai_config');
 
       if (aiError) throw aiError;
 
       const { error: backendError } = await supabase
         .from('system_settings')
-        .update({ value: backendUrl, updated_at: new Date().toISOString() })
+        .update({ value: backendUrl, updated_at: new Date().toISOString() } as any)
         .eq('key', 'backend_url');
 
       if (backendError) throw backendError;
 
       const { error: timeoutError } = await supabase
         .from('system_settings')
-        .update({ value: apiTimeout, updated_at: new Date().toISOString() })
+        .update({ value: apiTimeout, updated_at: new Date().toISOString() } as any)
         .eq('key', 'api_timeout');
 
       if (timeoutError) throw timeoutError;
 
       await refreshSettings();
+
+      // Clear backend URL cache so new URL takes effect immediately
+      clearBackendUrlCache();
 
       setMessage({
         type: 'success',

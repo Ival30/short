@@ -26,10 +26,10 @@ async function getBackendUrl(): Promise<string> {
       .select('value')
       .eq('key', 'backend_url')
       .eq('is_active', true)
-      .maybeSingle();
+      .maybeSingle() as { data: { value: string } | null; error: any };
 
     if (!error && data?.value) {
-      cachedBackendUrl = data.value as string;
+      cachedBackendUrl = data.value;
       lastFetchTime = Date.now();
       return cachedBackendUrl;
     }
@@ -214,6 +214,8 @@ export async function uploadVideo(
   userId: string,
   onProgress?: (progress: number) => void
 ): Promise<BackendResponse> {
+  const backendUrl = await ensureBackendConfigured();
+
   try {
     const formData = new FormData();
     formData.append('file', file);
@@ -241,7 +243,7 @@ export async function uploadVideo(
         reject(new Error('Upload failed'));
       });
 
-      xhr.open('POST', `${BACKEND_URL}/api/video/upload`);
+      xhr.open('POST', `${backendUrl}/api/video/upload`);
       xhr.send(formData);
     });
   } catch (error) {
@@ -335,9 +337,13 @@ export async function exportClip(
     resolution?: string;
   }
 ): Promise<BackendResponse> {
+  const backendUrl = await ensureBackendConfigured();
+
   try {
-    const response = await fetch(`${BACKEND_URL}/api/clips/export`, {
+    const response = await fetch(`${backendUrl}/api/clips/export`, {
       method: 'POST',
+      mode: 'cors',
+      credentials: 'omit',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         clip_id: clipId,
@@ -347,10 +353,14 @@ export async function exportClip(
       }),
     });
 
+    if (!response.ok) {
+      throw new Error(`Request failed: ${response.status}`);
+    }
+
     return await response.json();
   } catch (error) {
     console.error('Clip export error:', error);
-    throw error;
+    handleFetchError(error);
   }
 }
 
@@ -361,10 +371,20 @@ export async function getVideoInfo(
   videoId: string,
   userId: string
 ): Promise<any> {
+  const backendUrl = await ensureBackendConfigured();
+
   try {
     const response = await fetch(
-      `${BACKEND_URL}/api/video/${videoId}/info?user_id=${userId}`
+      `${backendUrl}/api/video/${videoId}/info?user_id=${userId}`,
+      {
+        mode: 'cors',
+        credentials: 'omit',
+      }
     );
+
+    if (!response.ok) {
+      throw new Error(`Request failed: ${response.status}`);
+    }
 
     const result: BackendResponse = await response.json();
 
@@ -375,7 +395,7 @@ export async function getVideoInfo(
     return result.data;
   } catch (error) {
     console.error('Get video info error:', error);
-    throw error;
+    handleFetchError(error);
   }
 }
 
@@ -387,10 +407,20 @@ export async function generateThumbnail(
   userId: string,
   timestamp: number = 0
 ): Promise<string> {
+  const backendUrl = await ensureBackendConfigured();
+
   try {
     const response = await fetch(
-      `${BACKEND_URL}/api/video/${videoId}/thumbnail?user_id=${userId}&timestamp=${timestamp}`
+      `${backendUrl}/api/video/${videoId}/thumbnail?user_id=${userId}&timestamp=${timestamp}`,
+      {
+        mode: 'cors',
+        credentials: 'omit',
+      }
     );
+
+    if (!response.ok) {
+      throw new Error(`Request failed: ${response.status}`);
+    }
 
     const result: BackendResponse = await response.json();
 
@@ -401,7 +431,7 @@ export async function generateThumbnail(
     return result.data.thumbnail_url;
   } catch (error) {
     console.error('Thumbnail generation error:', error);
-    throw error;
+    handleFetchError(error);
   }
 }
 
@@ -414,9 +444,13 @@ export async function transcodeVideo(
   outputFormat: string = 'mp4',
   resolution: string = '1080p'
 ): Promise<BackendResponse> {
+  const backendUrl = await ensureBackendConfigured();
+
   try {
-    const response = await fetch(`${BACKEND_URL}/api/video/transcode`, {
+    const response = await fetch(`${backendUrl}/api/video/transcode`, {
       method: 'POST',
+      mode: 'cors',
+      credentials: 'omit',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         video_id: videoId,
@@ -426,10 +460,14 @@ export async function transcodeVideo(
       }),
     });
 
+    if (!response.ok) {
+      throw new Error(`Request failed: ${response.status}`);
+    }
+
     return await response.json();
   } catch (error) {
     console.error('Transcoding error:', error);
-    throw error;
+    handleFetchError(error);
   }
 }
 
