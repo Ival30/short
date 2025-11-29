@@ -7,6 +7,8 @@ import { ClipEditorPage } from './pages/ClipEditorPage';
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
 import { SystemSettingsPage } from './pages/admin/SystemSettingsPage';
 import { ProtectedAdminRoute } from './components/ProtectedAdminRoute';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { NetworkStatus } from './components/NetworkStatus';
 import { Loader2 } from 'lucide-react';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -32,47 +34,50 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/auth" element={<AuthPage />} />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <DashboardPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/clip/:videoId"
-            element={
-              <ProtectedRoute>
-                <ClipEditorPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin"
-            element={
-              <ProtectedAdminRoute>
-                <AdminDashboardPage />
-              </ProtectedAdminRoute>
-            }
-          />
-          <Route
-            path="/admin/settings"
-            element={
-              <ProtectedAdminRoute requireSuperAdmin>
-                <SystemSettingsPage />
-              </ProtectedAdminRoute>
-            }
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </AuthProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <NetworkStatus />
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/auth" element={<AuthPage />} />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/clip/:videoId"
+              element={
+                <ProtectedRoute>
+                  <ClipEditorPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedAdminRoute>
+                  <AdminDashboardPage />
+                </ProtectedAdminRoute>
+              }
+            />
+            <Route
+              path="/admin/settings"
+              element={
+                <ProtectedAdminRoute requireSuperAdmin>
+                  <SystemSettingsPage />
+                </ProtectedAdminRoute>
+              }
+            />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 
